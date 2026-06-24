@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажер по работе с геносоциограммой</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root{
+  --bg:#f4f1ec; --card:#ffffff; --text:#2c2c2c; --muted:#6b6b6b;
+  --accent:#2e7d6f; --accent-light:#e8f3f1; --accent-hover:#256a5d;
+  --danger:#c0392b; --danger-light:#fdecea; --warning:#d4a017; --warning-light:#fff8e1;
+  --success:#27ae60; --success-light:#e8f8f0; --info:#2980b9; --info-light:#e8f4fc;
+  --border:#e0ddd8; --shadow:0 4px 20px rgba(0,0,0,0.06);
+  --font:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  --radius:14px; --radius-sm:8px;
+}
+html{ font-size:16px; }
+body{ font-family:var(--font); background:var(--bg); color:var(--text); line-height:1.6; min-height:100vh; padding:0; }
+#gsg-container{ max-width:900px; margin:0 auto; padding:24px; }
+@media(max-width:640px){ #gsg-container{ padding:12px; } }
+.gsg-header{ text-align:center; margin-bottom:28px; }
+.gsg-header h1{ font-size:1.6rem; font-weight:700; color:var(--accent); margin-bottom:6px; }
+.gsg-header p{ color:var(--muted); font-size:0.95rem; }
+.gsg-levels{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; }
+.gsg-level-btn{ padding:8px 18px; border:2px solid var(--border); background:var(--card); border-radius:var(--radius-sm); cursor:pointer; font-size:0.9rem; font-weight:600; color:var(--muted); transition:all .2s ease; }
+.gsg-level-btn:hover{ border-color:var(--accent); color:var(--accent); }
+.gsg-level-btn.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.gsg-screen{ display:none; animation:fadeIn .4s ease; }
+.gsg-screen.active{ display:block; }
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+.gsg-card{ background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); margin-bottom:18px; border:1px solid var(--border); }
+.gsg-card h2{ font-size:1.15rem; font-weight:700; margin-bottom:12px; color:var(--text); }
+.gsg-card h3{ font-size:1rem; font-weight:600; margin:16px 0 8px; color:var(--accent); }
+.gsg-card p{ margin-bottom:10px; font-size:0.95rem; }
+.gsg-btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px 24px; border:none; border-radius:var(--radius-sm); font-size:0.95rem; font-weight:600; cursor:pointer; transition:all .2s ease; text-decoration:none; }
+.gsg-btn-primary{ background:var(--accent); color:#fff; }
+.gsg-btn-primary:hover{ background:var(--accent-hover); }
+.gsg-btn-secondary{ background:var(--accent-light); color:var(--accent); }
+.gsg-btn-secondary:hover{ background:#d8ece8; }
+.gsg-btn-danger{ background:var(--danger); color:#fff; }
+.gsg-btn-danger:hover{ background:#a93226; }
+.gsg-btn-outline{ background:transparent; border:2px solid var(--accent); color:var(--accent); }
+.gsg-btn-outline:hover{ background:var(--accent-light); }
+.gsg-btn-sm{ padding:8px 16px; font-size:0.85rem; }
+.gsg-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.gsg-case-meta{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.gsg-meta-tag{ background:var(--accent-light); color:var(--accent); padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:600; }
+.gsg-case-text{ font-size:0.95rem; line-height:1.7; }
+.gsg-chat{ max-height:420px; overflow-y:auto; padding:4px; margin-bottom:16px; }
+.gsg-msg{ display:flex; gap:10px; margin-bottom:14px; animation:slideIn .3s ease; }
+@keyframes slideIn{ from{ opacity:0; transform:translateX(-8px); } to{ opacity:1; transform:none; } }
+.gsg-msg-avatar{ width:36px; height:36px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; }
+.gsg-msg-avatar.client{ background:var(--info-light); color:var(--info); }
+.gsg-msg-avatar.supervisor{ background:var(--warning-light); color:var(--warning); }
+.gsg-msg-avatar.method{ background:var(--success-light); color:var(--success); }
+.gsg-msg-body{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; font-size:0.92rem; max-width:85%; line-height:1.55; }
+.gsg-msg-name{ font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.5px; }
+.gsg-input-wrap{ display:flex; gap:8px; }
+.gsg-input{ flex:1; padding:12px 16px; border:2px solid var(--border); border-radius:var(--radius-sm); font-size:0.95rem; font-family:var(--font); outline:none; transition:border-color .2s; }
+.gsg-input:focus{ border-color:var(--accent); }
+.gsg-progress{ display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; }
+.gsg-progress-step{ flex:1; min-width:60px; height:6px; background:var(--border); border-radius:3px; transition:background .3s; }
+.gsg-progress-step.done{ background:var(--accent); }
+.gsg-progress-step.current{ background:var(--warning); }
+.gsg-report-section{ margin-bottom:20px; }
+.gsg-report-section h3{ font-size:1rem; color:var(--accent); margin-bottom:8px; border-bottom:2px solid var(--accent-light); padding-bottom:4px; }
+.gsg-report-list{ list-style:none; }
+.gsg-report-list li{ padding:6px 0; border-bottom:1px solid var(--border); font-size:0.92rem; }
+.gsg-report-list li:last-child{ border-bottom:none; }
+.gsg-score-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:16px; }
+.gsg-score-item{ background:var(--accent-light); padding:14px; border-radius:var(--radius-sm); }
+.gsg-score-label{ font-size:0.8rem; color:var(--muted); text-transform:uppercase; font-weight:600; }
+.gsg-score-val{ font-size:1.4rem; font-weight:700; color:var(--accent); margin-top:4px; }
+.gsg-tree{ font-family:monospace; font-size:0.85rem; line-height:1.8; background:#fafafa; padding:16px; border-radius:var(--radius-sm); border:1px solid var(--border); overflow-x:auto; white-space:pre; color:#333; }
+.gsg-hint-box{ background:var(--warning-light); border:1px solid #f0e0b0; border-radius:var(--radius-sm); padding:12px 16px; margin-top:12px; font-size:0.88rem; display:none; }
+.gsg-hint-box.visible{ display:block; }
+.gsg-score-badge{ display:inline-block; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:700; }
+.gsg-score-badge.high{ background:var(--success-light); color:var(--success); }
+.gsg-score-badge.mid{ background:var(--warning-light); color:var(--warning); }
+.gsg-score-badge.low{ background:var(--danger-light); color:var(--danger); }
+@media(max-width:480px){ .gsg-header h1{ font-size:1.3rem; } .gsg-card{ padding:16px; } .gsg-btn{ padding:10px 16px; font-size:0.9rem; } .gsg-msg-body{ max-width:92%; } }
+</style>
+</head>
+<body>
+
+<div id="gsg-container">
+  <div class="gsg-header">
+    <h1>Тренажер по работе с геносоциограммой</h1>
+    <p>Интерактивный симулятор для психологов. Практикуйте системное мышление, выявляйте травмы и ресурсы рода.</p>
+  </div>
+
+  <div class="gsg-levels" id="gsg-levels">
+    <button class="gsg-level-btn active" data-level="1">Начинающий</button>
+    <button class="gsg-level-btn" data-level="2">Практик</button>
+    <button class="gsg-level-btn" data-level="3">Продвинутый</button>
+    <button class="gsg-level-btn" data-level="4">Супервизия</button>
+  </div>
+
+  <div class="gsg-screen active" id="screen-start">
+    <div class="gsg-card" style="text-align:center;">
+      <h2>Добро пожаловать в тренажер</h2>
+      <p style="max-width:600px; margin:0 auto 20px;">Вы — психолог, работающий с клиентом. Клиент пришёл с запросом, но не знает всей семейной истории. Ваша задача — через вопросы исследовать систему, выявить скрытые паттерны, травмы и ресурсы рода.</p>
+      <p style="color:var(--muted); font-size:0.9rem; margin-bottom:24px;">Выберите уровень сложности выше и нажмите «Начать сессию». Каждый раз генерируется новый случайный кейс.</p>
+      <button class="gsg-btn gsg-btn-primary" onclick="app.startSession()">Начать сессию</button>
+    </div>
+  </div>
+
+  <div class="gsg-screen" id="screen-interview">
+    <div class="gsg-card">
+      <div class="gsg-case-meta" id="case-meta"></div>
+      <div class="gsg-case-text" id="case-text"></div>
+    </div>
+    <div class="gsg-progress" id="gsg-progress"></div>
+    <div class="gsg-card">
+      <h2>Диалог с клиентом</h2>
+      <div class="gsg-chat" id="gsg-chat"></div>
+      <div class="gsg-input-wrap">
+        <input type="text" class="gsg-input" id="gsg-question" placeholder="Введите ваш вопрос клиенту..." onkeydown="if(event.key==='Enter')app.askQuestion()">
+        <button class="gsg-btn gsg-btn-primary" onclick="app.askQuestion()">Спросить</button>
+      </div>
+      <div class="gsg-actions">
+        <button class="gsg-btn gsg-btn-secondary gsg-btn-sm" onclick="app.showHint()">Подсказка</button>
+        <button class="gsg-btn gsg-btn-outline gsg-btn-sm" onclick="app.suggestQuestion()">Подсказать вопрос</button>
+        <button class="gsg-btn gsg-btn-danger gsg-btn-sm" onclick="app.endInterview()">Завершить интервью</button>
+      </div>
+      <div class="gsg-hint-box" id="gsg-hint"></div>
+    </div>
+  </div>
+
+  <div class="gsg-screen" id="screen-report">
+    <div class="gsg-card">
+      <h2>Итоговый анализ сессии</h2>
+      <div id="report-content"></div>
+    </div>
+    <div class="gsg-card">
+      <h2>Оценка навыков</h2>
+      <div class="gsg-score-grid" id="score-grid"></div>
+      <div style="text-align:center; margin-top:20px;">
+        <div style="font-size:2rem; font-weight:700; color:var(--accent);" id="total-score">0</div>
+        <div style="color:var(--muted); font-size:0.9rem;">Общий балл из 100</div>
+      </div>
+    </div>
+    <div class="gsg-actions" style="justify-content:center;">
+      <button class="gsg-btn gsg-btn-primary" onclick="app.startSession()">Новая сессия</button>
+      <button class="gsg-btn gsg-btn-secondary" onclick="app.showStart()">На главную</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const FAMILY_TEMPLATES = [
+  {
+    name: "Анна Сергеевна К.", age: 32, gender: "ж",
+    request: "Панические атаки, страх одиночества, повторяющиеся разрывы отношений",
+    client: { name: "Анна", age: 32, status: "разведена", child: "дочь Маша, 5 лет" },
+    father: { name: "Сергей", age: 58, alive: true, occupation: "инженер", trauma: "алкоголизм, эмоциональная недоступность", relationToClient: "отчуждение" },
+    mother: { name: "Татьяна", age: 56, alive: true, occupation: "учительница", trauma: "гиперответственность, тревога", relationToClient: "энмешмент" },
+    gf_p: { name: "Иван", alive: false, died: 1989, cause: "инфаркт", trauma: "ветеран ВОВ, молчаливость, запрет на чувства" },
+    gm_p: { name: "Антонина", alive: false, died: 1995, cause: "рак", trauma: "потеря сына в детстве (утопился), подавленное горе" },
+    gf_m: { name: "Алексей", alive: false, died: 1978, cause: "несчастный случай на производстве", trauma: "раннее сиротство, бедность, раскулачивание семьи" },
+    gm_m: { name: "Валентина", alive: false, died: 2002, cause: "старость", trauma: "воспитывала 4 детей одна, нереализованный талант певицы" },
+    siblings: [{ name: "Дмитрий", age: 35, relation: "старший брат", status: "живёт отдельно, редко общается" }],
+    excluded: [
+      { who: "брат Антонины (прадед по отцу)", what: "репрессирован в 1937, расстрелян", impact: "семья никогда не упоминала" },
+      { who: "сын Антонины и Ивана", what: "утонул в 3 года (1955)", impact: "мать впала в депрессию, отец запретил говорить" },
+      { who: "бывший муж Анны", what: "развод после 3 лет брака, измена", impact: "повторяет сценарий отца — эмоциональная недоступность" }
+    ],
+    traumas: [
+      "ВОВ: дед Иван участвовал, не говорил о войне, запретил проявлять слабость",
+      "Раскулачивание: прадед по матери лишился земли, семья голодала",
+      "Репрессии 1937: брат прадеда по отцу расстрелян, имя вычеркнуто из семьи",
+      "Ранняя смерть ребёнка: сын бабушки Антонины утонул, горе заморожено",
+      "Развод родителей Анны: отец ушёл к другой женщине, Анне было 8 лет",
+      "Алкоголизм отца: Сергей пил тайно, семья жила в страхе скандалов"
+    ],
+    rules: [
+      "Не высовывайся (от дедовской травмы войны)",
+      "Не чувствуй (отец запрещал плакать)",
+      "Будь сильной (наследие ветерана)",
+      "Не доверяй мужчинам (опыт матери и бабушки)",
+      "Сначала другие, потом ты (гиперответственность матери)"
+    ],
+    scenarios: [
+      { area: "Отношения", pattern: "Выбор эмоционально недоступных мужчин, затем разрыв", generations: "3 поколения (бабушка, мать, Анна)", origin: "Травма отсутствия близости с отцом/мужем" },
+      { area: "Деньги", pattern: "Невозможность накопить, страх богатства", generations: "2 поколения", origin: "Травма раскулачивания, бедность прадеда" },
+      { area: "Самореализация", pattern: "Отказ от творческого призвания", generations: "2 поколения (бабушка Валентина, Анна)", origin: "Запрет на радость и самовыражение" }
+    ],
+    resources: [
+      { type: "Фигура силы", who: "Бабушка Валентина", what: "Воспитала 4 детей одна, сохранила достоинство" },
+      { type: "Родовая компетенция", who: "Мать Татьяна", what: "Педагогика, забота о детях — 30 лет в школе" },
+      { type: "История преодоления", who: "Прадед Алексей", what: "После раскулачивания выжил, восстановил семью с нуля" },
+      { type: "Поддерживающая ценность", who: "Вся материнская линия", what: "Взаимопомощь, ответственность, образование" },
+      { type: "Талант", who: "Бабушка Валентина", what: "Пение — передаётся, Анна поёт в хоре" }
+    ],
+    myths: [
+      "Наша семья всегда была благополучной (скрытие репрессий и алкоголизма)",
+      "Мужчины в нашей семье герои (восхваление деда-ветерана, игнорирование травмы)",
+      "Мы не плачем, мы терпим (семейный миф о силе)"
+    ],
+    emotions: [
+      { emotion: "Тревога", source: "Мать Татьяна — бабушка Валентина", mechanism: "Моделирование поведения, энмешмент", current: "Панические атаки, бессонница" },
+      { emotion: "Стыд", source: "Прадед Алексей (раскулачивание)", mechanism: "Передача через запрет на успех", current: "Страх быть заметной, самосаботаж" },
+      { emotion: "Горе (замороженное)", source: "Бабушка Антонина (смерть сына)", mechanism: "Невысказанное горе, эмоциональная замороженность", current: "Неспособность переживать потерю, быстрое замещение партнёров" }
+    ]
+  },
+  {
+    name: "Максим Андреевич П.", age: 41, gender: "м",
+    request: "Хроническая усталость, выгорание, невозможность сказать «нет», конфликты с начальством",
+    client: { name: "Максим", age: 41, status: "женат", child: "сын Артём, 12 лет, дочь Полина, 8 лет" },
+    father: { name: "Андрей", age: 68, alive: true, occupation: "военный пенсионер", trauma: "жёсткий контроль, авторитаризм, запрет на слабость", relationToClient: "напряжённые, Максим боится разочаровать" },
+    mother: { name: "Людмила", age: 65, alive: true, occupation: "врач", trauma: "перфекционизм, работала 24/7, эмоциональная недоступность", relationToClient: "холодная близость" },
+    gf_p: { name: "Григорий", alive: false, died: 1991, cause: "последствия контузии", trauma: "ветеран, командир, потеря всего отряда в 1943" },
+    gm_p: { name: "Зинаида", alive: false, died: 1987, cause: "инсульт", trauma: "выжила в блокадном Ленинграде, потеря 2 братьев" },
+    gf_m: { name: "Павел", alive: false, died: 1980, cause: "самоубийство", trauma: "психическое расстройство после репрессий отца, депрессия" },
+    gm_m: { name: "Раиса", alive: false, died: 1995, cause: "старость", trauma: "врач-фронтовик, видела смерть, не могла остановиться спасать" },
+    siblings: [{ name: "Ольга", age: 38, relation: "младшая сестра", status: "живёт в другом городе, редко общается" }],
+    excluded: [
+      { who: "Прадед Павла (по матери)", what: "репрессирован как «враг народа» в 1938", impact: "семья скрывала родство, сменили фамилию" },
+      { who: "Дядя Григория (по отцу)", what: "погиб на фронте в 1942, тело не найдено", impact: "бабушка Зинаида всю жизнь ждала" },
+      { who: "Сын Ольги", what: "аборт в юности (Ольге было 19)", impact: "никто не знает, Ольга замкнулась" }
+    ],
+    traumas: [
+      "Блокада Ленинграда: бабушка Зинаида пережила, потеряла братьев",
+      "ВОВ: дед Григорий потерял весь отряд, чувство вины выжившего",
+      "Репрессии: прадед по матери расстрелян, семья сменила фамилию",
+      "Самоубийство деда Павла: повешался в сарае, Максиму было 5 лет",
+      "Авторитаризм отца: Андрей воспитывал как в подразделении, наказания за слабость",
+      "Эмоциональная недоступность матери: Людмила всегда на работе, Максим воспитывался няней"
+    ],
+    rules: [
+      "Будь сильным, не жалуйся (от дедовской травмы войны)",
+      "Работай, пока не упадёшь (наследие врачей и блокадников)",
+      "Не высовывайся, лежачего не бьют (репрессии)",
+      "Мужчина должен обеспечивать (авторитарный отец)",
+      "Не чувствуй — чувства мешают работать (мать-врач)"
+    ],
+    scenarios: [
+      { area: "Самореализация", pattern: "Выгорание, невозможность отдохнуть", generations: "3 поколения (бабушка Раиса, мать Людмила, Максим)", origin: "Компульсивное спасение/работа как защита от травмы" },
+      { area: "Отношения с властью", pattern: "Конфликты с начальством, страх авторитарных фигур", generations: "2 поколения", origin: "Травма отца-командира, запрет на автономность" },
+      { area: "Деньги", pattern: "Постоянный заработок, но невозможность накопить", generations: "2 поколения", origin: "Травма блокады — надо всё съесть/потратить сразу" }
+    ],
+    resources: [
+      { type: "Фигура силы", who: "Бабушка Раиса", what: "Врач-фронтовик, спасала жизни, сохранила человечность" },
+      { type: "Родовая компетенция", who: "Мать Людмила", what: "Медицина — 40 лет практики, уважение коллег" },
+      { type: "История преодоления", who: "Бабушка Зинаида", what: "Выжила в блокаде, воспитала 3 детей, сохранила веру" },
+      { type: "Поддерживающая ценность", who: "Вся семья", what: "Трудолюбие, служение другим, стойкость" },
+      { type: "Талант", who: "Дед Григорий", what: "Лидерство, тактическое мышление — Максим хороший менеджер" }
+    ],
+    myths: [
+      "Мужчины нашей семьи — железные (скрытие самоубийства деда и депрессии)",
+      "Мы все спасатели (врачи, герои — нельзя отказать в помощи)",
+      "Покой — это для слабых (культ работы)"
+    ],
+    emotions: [
+      { emotion: "Вина выжившего", source: "Дед Григорий (потеря отряда)", mechanism: "Идентификация с героем, невозможность быть слабым", current: "Выгорание, неспособность просить помощь" },
+      { emotion: "Тревога", source: "Бабушка Зинаида (блокада)", mechanism: "Передача через материнскую линию", current: "Страх голода, бедности, необходимость всё контролировать" },
+      { emotion: "Стыд", source: "Прадед (репрессии, смена фамилии)", mechanism: "Скрытая лояльность к исключённому", current: "Страх быть неправым, конфликты с начальством как проекция" }
+    ]
+  },
+  {
+    name: "Екатерина Викторовна М.", age: 27, gender: "ж",
+    request: "Депрессия после рождения ребёнка, чувство пустоты, отсутствие связи с матерью",
+    client: { name: "Екатерина", age: 27, status: "замужем", child: "сын Лёша, 8 месяцев" },
+    father: { name: "Виктор", age: 55, alive: true, occupation: "предприниматель", trauma: "банкротство в 2008, депрессия, измены", relationToClient: "отдалённый, финансовая поддержка вместо близости" },
+    mother: { name: "Светлана", age: 53, alive: true, occupation: "домохозяйка", trauma: "зависимость от мужа, нереализованность, агрессия", relationToClient: "конфликтная, обвиняет в неблагодарности" },
+    gf_p: { name: "Борис", alive: false, died: 2005, cause: "сердечный приступ", trauma: "предприниматель, потеря всего при приватизации, алкоголизм" },
+    gm_p: { name: "Ирина", alive: false, died: 2010, cause: "старость", trauma: "выживала за счёт красоты, 3 брака по расчёту" },
+    gf_m: { name: "Фёдор", alive: false, died: 1990, cause: "убийство", trauma: "криминальный авторитет 90-х, расстрелян в разборке" },
+    gm_m: { name: "Галина", alive: true, age: 78, trauma: "воспитывала Светлану одна, работала на 2 работах, никогда не жаловалась" },
+    siblings: [{ name: "Артём", age: 24, relation: "младший брат", status: "игромания, живёт с родителями" }],
+    excluded: [
+      { who: "Тётя Галины (сестра)", what: "умерла при родах в 1965, ребёнок выжил, отдан в приют", impact: "Галина никогда не упоминала сестру, но всю жизнь помогала приютам" },
+      { who: "Первая жена Бориса", what: "развод, отец забрал детей, она исчезла из жизни семьи", impact: "Ирина — вторая жена, семейный миф о «единственной любви»" },
+      { who: "Сын Фёдора от первого брака", what: "сидел в тюрьме за наркотики, семья отреклась", impact: "скрытая лояльность — Артём повторяет сценарий зависимости" }
+    ],
+    traumas: [
+      "Приватизация 90-х: дед Борис потерял завод, впал в алкоголизм",
+      "Криминал 90-х: дед Фёдор убит, семья скрывает происхождение",
+      "Ранняя смерть при родах: тётя Галины умерла, ребёнок отдан в приют",
+      "Банкротство отца Виктора в 2008: семья потеряла квартиру, переехала в съёмную",
+      "Измены отца: Виктор много раз изменял, Светлана терпела ради детей",
+      "Игромания брата Артёма: повторение сценария зависимости деда Фёдора"
+    ],
+    rules: [
+      "Деньги — главное (травма потери имущества)",
+      "Терпи, если хочешь сохранить семью (мать Светлана)",
+      "Не доверяй мужчинам (бабушка Ирина, мать Светлана)",
+      "Красота — валюта выживания (бабушка Ирина)",
+      "Не жалуйся, работай (бабушка Галина)"
+    ],
+    scenarios: [
+      { area: "Отношения", pattern: "Выбор мужчин, которые обеспечивают, но эмоционально недоступны", generations: "3 поколения (Ирина, Светлана, Екатерина)", origin: "Травма отца/мужа-предпринимателя, цена благополучия — одиночество" },
+      { area: "Материнство", pattern: "Трудности в привязанности к ребёнку, чувство пустоты", generations: "2 поколения (Светлана, Екатерина)", origin: "Эмоциональная недоступность матери, отсутствие модели заботы" },
+      { area: "Деньги", pattern: "Циклы богатство-потеря, страх нищеты", generations: "3 поколения (Борис, Виктор, Екатерина)", origin: "Травмы 90-х, приватизация, криминал" }
+    ],
+    resources: [
+      { type: "Фигура силы", who: "Бабушка Галина", what: "Воспитала дочь одна, работала на износ, не теряла достоинства" },
+      { type: "Родовая компетенция", who: "Дед Борис", what: "Предпринимательство — Екатерина открыла онлайн-магазин" },
+      { type: "История преодоления", who: "Бабушка Ирина", what: "Выжила в тяжёлые годы, адаптировалась к любым условиям" },
+      { type: "Поддерживающая ценность", who: "Галина", what: "Трудолюбие, адаптивность, молчаливая забота" },
+      { type: "Талант", who: "Бабушка Ирина", what: "Красота, харизма — Екатерина фотомодель в юности" }
+    ],
+    myths: [
+      "Наша семья всегда была обеспеченной (скрытие криминала, банкротств)",
+      "Женщина должна терпеть ради детей (мать Светлана как пример)",
+      "Мужчины в нашей семье — кормильцы (игнорирование эмоциональной пустоты)"
+    ],
+    emotions: [
+      { emotion: "Пустота", source: "Мать Светлана (нереализованность, зависимость)", mechanism: "Идентификация, отсутствие эмоционального контакта", current: "Постродовая депрессия, неспособность радоваться материнству" },
+      { emotion: "Тревога", source: "Дед Борис (потеря имущества)", mechanism: "Передача через отца", current: "Страх потери стабильности, навязчивый контроль" },
+      { emotion: "Стыд", source: "Дед Фёдор (криминал, убийство)", mechanism: "Скрытая лояльность, запрет на правду", current: "Чувство неполноценности, страх быть «раскрытой»" }
+    ]
+  }
+];
+
+const QUESTION_PATTERNS = {
+  system: [/родител/i,/бабушк/i,/дедушк/i,/прарод/i,/брат/i,/сестр/i,/семь/i,/род/i,/состав/i,/систем/i,/поколен/i,/родствен/i,/супруг/i,/партнёр/i,/бывш/i,/приёмн/i,/исключ/i,/структур/i,/связ/i,/коалиц/i,/контакт/i,/отношен/i],
+  events: [/войн/i,/эмиграц/i,/репресс/i,/раскулач/i,/банкрот/i,/потер/i,/болезн/i,/инвалидн/i,/зависим/i,/развод/i,/смерт/i,/самоубийств/i,/убийств/i,/несчастн/i,/событ/i,/травм/i,/кризис/i,/пережив/i,/потеря/i],
+  emotions: [/тревог/i,/страх/i,/вин/i,/стыд/i,/беспомощн/i,/недовер/i,/одиночеств/i,/заморожен/i,/гиперответственн/i,/эмоц/i,/чувств/i,/переживан/i,/настроен/i,/депресс/i,/паник/i,/гор/i,/злост/i,/обид/i],
+  rules: [/правил/i,/можно/i,/нельзя/i,/чувствовать/i,/опасн/i,/правильн/i,/установк/i,/запрет/i,/долж/i,/надо/i,/нужн/i,/норм/i,/традиц/i,/ценност/i,/вер/i],
+  scenarios: [/сценар/i,/повтор/i,/развод/i,/измен/i,/одиночеств/i,/недоступн/i,/насили/i,/деньг/i,/бедност/i,/имуществ/i,/успех/i,/накоплен/i,/карьер/i,/призван/i,/талант/i,/самореализац/i,/работ/i],
+  excluded: [/исключ/i,/забыт/i,/умерш/i,/аборт/i,/преждевременн/i,/мертворождён/i,/психическ/i,/зависим/i,/осуждён/i,/тюрьм/i,/преступ/i,/репрессирован/i,/скрыт/i,/тайн/i,/не говор/i,/молч/i,/не упомин/i],
+  resources: [/ресурс/i,/сил/i,/преодол/i,/выжил/i,/восстанов/i,/компетенц/i,/способн/i,/талант/i,/предприним/i,/лидер/i,/медицин/i,/педагог/i,/творчеств/i,/научн/i,/наставник/i,/объедин/i,/забот/i,/традиц/i,/ценност/i,/трудолюб/i,/взаимопомощ/i,/свобод/i,/образован/i,/служен/i,/адаптивн/i]
+};
+
+const SUGGESTED_QUESTIONS = [
+  "Расскажите о своих родителях. Какие у них были характеры?",
+  "Были ли в вашей семье какие-то тяжёлые события — войны, потери, болезни?",
+  "Как вы думаете, какие чувства передавались в вашей семье из поколения в поколение?",
+  "Были ли в семье люди, о которых не принято было говорить?",
+  "Какие правила существовали в вашей семье — что можно, а что нельзя?",
+  "Есть ли в вашей семье повторяющиеся сценарии в отношениях, деньгах, работе?",
+  "Кто в вашем роду был примером силы и преодоления?",
+  "Какие таланты или способности передавались в вашей семье?",
+  "Что в вашей семье считалось важным — какие ценности?",
+  "Были ли в семье разводы, измены, ранняя потеря партнёров?"
+];
+
+const HINTS = {
+  1: ["Начните с состава семьи — спросите о родителях, бабушках и дедушках.","Спросите о тяжёлых событиях в истории семьи.","Обратите внимание на эмоции, которые клиент описывает при рассказе о семье.","Не забудьте спросить о людях, о которых в семье не говорят."],
+  2: ["Попробуйте связать эмоции клиента с событиями в истории рода.","Ищите повторяющиеся сценарии между поколениями.","Обратите внимание на семейные правила и послания.","Не забудьте про ресурсы — они не менее важны, чем травмы."],
+  3: ["Вы на продвинутом уровне — подсказок нет. Доверьтесь интуиции и системному мышлению."],
+  4: ["Супервизионный режим. Анализируйте собственное клиническое мышление. Задавайте вопросы, которые открывают систему."]
+};
+
+const app = {
+  level: 1, caseData: null, chat: [], discovered: new Set(), questionCount: 0, scores: {},
+
+  init(){
+    document.querySelectorAll('.gsg-level-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.gsg-level-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.level = parseInt(btn.dataset.level);
+      });
+    });
+  },
+
+  showScreen(id){
+    document.querySelectorAll('.gsg-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  },
+
+  showStart(){ this.showScreen('screen-start'); },
+
+  startSession(){
+    this.caseData = FAMILY_TEMPLATES[Math.floor(Math.random() * FAMILY_TEMPLATES.length)];
+    this.chat = []; this.discovered = new Set(); this.questionCount = 0;
+    this.scores = { system:0, events:0, emotions:0, rules:0, scenarios:0, excluded:0, resources:0, hypotheses:0, questions:0, logic:0 };
+    this.renderCaseInfo(); this.renderProgress(); this.renderChat();
+    this.showScreen('screen-interview');
+    this.addSystemMsg("Начните интервью. Задавайте вопросы клиенту, чтобы исследовать семейную систему.");
+    this.addClientMsg(this.generateOpening());
+  },
+
+  renderCaseInfo(){
+    const c = this.caseData;
+    document.getElementById('case-meta').innerHTML = '<span class="gsg-meta-tag">' + c.name + ', ' + c.age + ' лет</span><span class="gsg-meta-tag">' + c.request + '</span><span class="gsg-meta-tag">Уровень ' + this.level + '</span>';
+    document.getElementById('case-text').innerHTML = '<strong>Запрос клиента:</strong> «' + c.request + '»<br><br><strong>Что известно на старте:</strong> Клиент обращается с личным запросом, но о семейной истории знает фрагментарно. Информация будет раскрываться постепенно, по мере ваших вопросов.';
+  },
+
+  renderProgress(){
+    const blocks = ['Состав','События','Эмоции','Правила','Сценарии','Исключённые','Ресурсы'];
+    const discovered = [this.discovered.has('system'),this.discovered.has('events'),this.discovered.has('emotions'),this.discovered.has('rules'),this.discovered.has('scenarios'),this.discovered.has('excluded'),this.discovered.has('resources')];
+    let html = '';
+    blocks.forEach((b,i) => {
+      const cls = discovered[i] ? 'done' : (i === discovered.findIndex(d=>!d) ? 'current' : '');
+      html += '<div class="gsg-progress-step ' + cls + '" title="' + b + '"></div>';
+    });
+    document.getElementById('gsg-progress').innerHTML = html;
+  },
+
+  renderChat(){
+    const chatEl = document.getElementById('gsg-chat');
+    chatEl.innerHTML = this.chat.map(msg => {
+      let avatarClass = 'client', name = 'Клиент';
+      if (msg.role === 'supervisor') { avatarClass = 'supervisor'; name = 'Супервизор'; }
+      else if (msg.role === 'method') { avatarClass = 'method'; name = 'Методолог'; }
+      else if (msg.role === 'system') { avatarClass = 'method'; name = 'Система'; }
+      return '<div class="gsg-msg"><div class="gsg-msg-avatar ' + avatarClass + '">' + name[0] + '</div><div class="gsg-msg-body"><div class="gsg-msg-name">' + name + '</div><div class="gsg-msg-text">' + msg.text + '</div></div></div>';
+    }).join('');
+    chatEl.scrollTop = chatEl.scrollHeight;
+  },
+
+  addMsg(role,text){ this.chat.push({role,text}); this.renderChat(); },
+  addClientMsg(text){ this.addMsg('client',text); },
+  addSupervisorMsg(text){ this.addMsg('supervisor',text); },
+  addMethodMsg(text){ this.addMsg('method',text); },
+  addSystemMsg(text){ this.addMsg('system',text); },
+
+  generateOpening(){
+    const c = this.caseData;
+    const openings = [
+      'Здравствуйте. Меня зовут ' + c.client.name + '. Я пришла, потому что ' + c.request.toLowerCase() + '. Честно говоря, я не очень понимаю, как это связано с моей семьёй, но вы сказали, что нам стоит поговорить об этом.',
+      'Добрый день. Я ' + c.client.name + ', мне ' + c.client.age + '. Мой запрос — ' + c.request.toLowerCase() + '. О семье я знаю не так много, родители редко говорили о прошлом.',
+      'Здравствуйте. Я обратилась с проблемой: ' + c.request.toLowerCase() + '. Мне ' + c.client.age + ', ' + c.client.status + '. Готова отвечать на ваши вопросы.'
+    ];
+    return openings[Math.floor(Math.random() * openings.length)];
+  },
+
+  askQuestion(){
+    const input = document.getElementById('gsg-question');
+    const q = input.value.trim();
+    if (!q) return;
+    input.value = ''; this.questionCount++;
+
+    let detectedBlock = null;
+    for (const [block,patterns] of Object.entries(QUESTION_PATTERNS)){
+      if (patterns.some(p => p.test(q))) { detectedBlock = block; break; }
+    }
+
+    const evalResult = this.evaluateQuestion(q,detectedBlock);
+    this.addMsg('system','<strong>Ваш вопрос:</strong> «' + q + '»');
+
+    if (this.level <= 2 && evalResult.feedback){
+      this.addSupervisorMsg(evalResult.feedback);
+    }
+
+    const answer = this.generateAnswer(q,detectedBlock);
+    this.addClientMsg(answer);
+
+    if (this.level === 1 && detectedBlock){
+      const methodHints = {
+        system:"Вы исследуете состав системы. Обратите внимание на эмоциональные связи и коалиции.",
+        events:"Вы исследуете значимые события. Ищите периоды системного кризиса.",
+        emotions:"Вы исследуете эмоциональное наследование. Связывайте чувства с событиями.",
+        rules:"Вы исследуете семейные правила. Спросите, откуда они взялись.",
+        scenarios:"Вы исследуете повторяющиеся сценарии. Ищите параллели между поколениями.",
+        excluded:"Вы исследуете исключённых фигур. Это ключ к скрытым лояльностям.",
+        resources:"Вы исследуете ресурсы рода. Не забывайте — травмы и ресурсы идут рядом."
+      };
+      this.addMethodMsg(methodHints[detectedBlock]);
+    }
+
+    if (this.questionCount >= 5 && this.questionCount % 3 === 0){
+      const hyp = this.generateHypothesis();
+      if (hyp) this.addMethodMsg('<strong>Гипотеза:</strong> ' + hyp);
+    }
+
+    this.renderProgress();
+  },
+
+  evaluateQuestion(q,block){
+    let feedback = '', scoreAdd = 0;
+    const isOpen = !/^(есть ли|были ли|не правда ли|разве не)/i.test(q);
+    const isSystemic = block !== null;
+    const isDeep = q.length > 30;
+    const isNonJudgmental = !/(почему вы не|вы должны|ваша вина|ваша проблема)/i.test(q);
+    const isNotPremature = !/(потому что ваш|из-за вашего|это связано с)/i.test(q);
+
+    if (!isOpen) feedback = "Вопрос закрытый — попробуйте переформулировать открыто, чтобы клиент мог рассказать больше.";
+    else if (!isSystemic) { feedback = "Вопрос не направлен на исследование системы. Попробуйте связать его с семейной историей."; scoreAdd = 1; }
+    else if (!isNonJudgmental) feedback = "Вопрос содержит оценку или осуждение. Это может закрыть клиента.";
+    else if (!isNotPremature) feedback = "Вопрос преждевременно интерпретирует ситуацию и может привести к навязыванию гипотезы.";
+    else if (isDeep && isSystemic) { feedback = "Сильный вопрос, позволяет исследовать глубинные паттерны семейной системы."; scoreAdd = 3; if (block) this.scores[block] = Math.min(10,this.scores[block]+2); this.scores.questions = Math.min(10,this.scores.questions+1); }
+    else { feedback = "Хороший вопрос. Продолжайте исследование в этом направлении."; scoreAdd = 2; if (block) this.scores[block] = Math.min(10,this.scores[block]+1); }
+
+    if (block) this.discovered.add(block);
+    this.scores.logic = Math.min(10,this.scores.logic + scoreAdd/2);
+    return { feedback };
+  },
+
+  generateAnswer(q,block){
+    const c = this.caseData, r = Math.random();
+    if (block === 'system' || /родител/i.test(q)){
+      if (/отец|папа|мужчина/i.test(q)) return 'Мой отец, ' + c.father.name + ', ему ' + c.father.age + '. Он ' + c.father.occupation + '. ' + (c.father.alive ? 'Жив, здоровье нормальное.' : 'Уже умер.') + ' С ним у нас ' + c.father.relationToClient + '. Он ' + c.father.trauma + '.';
+      if (/мать|мама/i.test(q)) return 'Мама, ' + c.mother.name + ', ' + c.mother.age + ' лет. ' + c.mother.occupation + '. ' + (c.mother.alive ? 'Жива.' : 'Умерла.') + ' У нас с ней ' + c.mother.relationToClient + '. Она всегда была ' + c.mother.trauma + '.';
+      if (/бабушк|дедушк|прарод/i.test(q)){
+        const parts = [];
+        parts.push('По отцу: дед ' + c.gf_p.name + ' ' + (c.gf_p.alive ? 'жив' : 'умер в ' + c.gf_p.died + ' году, ' + c.gf_p.cause) + '. ' + c.gf_p.trauma + '.');
+        parts.push('Бабушка по отцу, ' + c.gm_p.name + ', ' + (c.gm_p.alive ? 'жива' : 'умерла в ' + c.gm_p.died + ', ' + c.gm_p.cause) + '. ' + c.gm_p.trauma + '.');
+        parts.push('По матери: дед ' + c.gf_m.name + ' ' + (c.gf_m.alive ? 'жив' : 'умер в ' + c.gf_m.died + ', ' + c.gf_m.cause) + '. ' + c.gf_m.trauma + '.');
+        parts.push('Бабушка по матери, ' + c.gm_m.name + ', ' + (c.gm_m.alive ? 'ей ' + (c.gm_m.age || 'много лет') + ', жива' : 'умерла в ' + c.gm_m.died) + '. ' + c.gm_m.trauma + '.');
+        return parts.join(' ');
+      }
+      if (/брат|сестр/i.test(q)){
+        if (c.siblings.length === 0) return "У меня нет братьев и сестёр. Я единственный ребёнок.";
+        return c.siblings.map(s => 'У меня ' + s.relation + ' ' + s.name + ', ' + s.age + ' лет. ' + s.status + '.').join(' ');
+      }
+      return 'В нашей семье — я, мои родители, бабушки и дедушки. ' + (c.client.status === 'разведена' ? 'Я разведена. ' : '') + (c.client.child ? 'У меня ' + c.client.child + '.' : '');
+    }
+    if (block === 'events'){
+      if (r < 0.3) return c.traumas[0]; if (r < 0.5) return c.traumas[1]; if (r < 0.7) return c.traumas[2];
+      return c.traumas[Math.floor(Math.random() * c.traumas.length)];
+    }
+    if (block === 'emotions'){
+      const e = c.emotions[Math.floor(Math.random() * c.emotions.length)];
+      return 'Я часто чувствую ' + e.emotion.toLowerCase() + '. Мама тоже была такой... а бабушка, кажется, тоже. ' + e.current + '.';
+    }
+    if (block === 'rules'){
+      const rule = c.rules[Math.floor(Math.random() * c.rules.length)];
+      return 'В нашей семье говорили: «' + rule + '». Это было как само собой разумеющееся.';
+    }
+    if (block === 'scenarios'){
+      const s = c.scenarios[Math.floor(Math.random() * c.scenarios.length)];
+      return 'В плане ' + s.area.toLowerCase() + '... ' + s.pattern + '. Это уже ' + s.generations + '.';
+    }
+    if (block === 'excluded'){
+      if (r < 0.5 && c.excluded.length > 0){
+        const ex = c.excluded[Math.floor(Math.random() * c.excluded.length)];
+        return 'Знаете... есть кое-что, о чём редко говорят. ' + ex.who + ' — ' + ex.what + '. Никто не знал, как это повлияло на нас.';
+      }
+      return "О некоторых вещах в семье не принято говорить. Я слышала лишь намёки...";
+    }
+    if (block === 'resources'){
+      const res = c.resources[Math.floor(Math.random() * c.resources.length)];
+      return res.who + ' — ' + res.what + '. Это, наверное, и есть наш ресурс.';
+    }
+    const fallbacks = [
+      "Я не уверена, что понимаю связь... но могу сказать, что в нашей семье многое оставалось за кадром.",
+      "Родители редко говорили о прошлом. Я знаю лишь отдельные факты.",
+      "Это интересный вопрос. Я никогда не задумывалась с этой стороны.",
+      "Мне нужно подумать... Возможно, это связано с тем, что бабушка всегда молчала о войне."
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  },
+
+  generateHypothesis(){
+    const c = this.caseData;
+    const hyps = [
+      'В системе может передаваться ' + c.emotions[0].emotion.toLowerCase() + ' по ' + (c.emotions[0].source.includes('матер') ? 'материнской' : 'отцовской') + ' линии.',
+      'Возможна скрытая лояльность к исключённой фигуре — ' + c.excluded[0].who + '.',
+      'Семейный миф «' + c.myths[0] + '» может блокировать переработку травмы.',
+      'Повторяющийся сценарий в сфере ' + c.scenarios[0].area.toLowerCase() + ' указывает на незавершённый процесс в ' + c.scenarios[0].generations + '.',
+      'Ресурс ' + c.resources[0].who + ' может стать опорой для клиента в терапии.'
+    ];
+    return hyps[Math.floor(Math.random() * hyps.length)];
+  },
+
+  showHint(){
+    const hintBox = document.getElementById('gsg-hint');
+    const hints = HINTS[this.level];
+    const hint = hints[Math.floor(Math.random() * hints.length)];
+    hintBox.innerHTML = '<strong>Подсказка:</strong> ' + hint;
+    hintBox.classList.add('visible');
+    setTimeout(() => hintBox.classList.remove('visible'), 8000);
+  },
+
+  suggestQuestion(){
+    const q = SUGGESTED_QUESTIONS[Math.floor(Math.random() * SUGGESTED_QUESTIONS.length)];
+    document.getElementById('gsg-question').value = q;
+    document.getElementById('gsg-question').focus();
+  },
+
+  endInterview(){
+    this.showScreen('screen-report');
+    this.generateReport();
+  },
+
+  buildFamilyTree(c){
+    let tree = '        [Прадед]---[Прабабушка]
+';
+    tree += '                   |
+';
+    tree += '    [Дед ' + c.gf_p.name + ']---[Бабушка ' + c.gm_p.name + ']      [Дед ' + c.gf_m.name + ']---[Бабушка ' + c.gm_m.name + ']
+';
+    tree += '              |                              |
+';
+    tree += '    [Отец ' + c.father.name + ']---[Мать ' + c.mother.name + ']
+';
+    tree += '              |
+';
+    tree += '    [КЛИЕНТ ' + c.client.name + ', ' + c.client.age + ']
+';
+    if (c.client.child) tree += '              |
+    [' + c.client.child + ']
+';
+    if (c.siblings.length > 0) tree += '    ' + c.siblings.map(s => '[' + s.relation + ' ' + s.name + ']').join('  ');
+    return tree;
+  },
+
+  calculateScores(){
+    return {
+      system: this.discovered.has('system') ? Math.min(10, 5 + this.scores.system) : Math.min(10, this.scores.system),
+      events: this.discovered.has('events') ? Math.min(10, 5 + this.scores.events) : Math.min(10, this.scores.events),
+      emotions: this.discovered.has('emotions') ? Math.min(10, 5 + this.scores.emotions) : Math.min(10, this.scores.emotions),
+      rules: this.discovered.has('rules') ? Math.min(10, 5 + this.scores.rules) : Math.min(10, this.scores.rules),
+      scenarios: this.discovered.has('scenarios') ? Math.min(10, 5 + this.scores.scenarios) : Math.min(10, this.scores.scenarios),
+      excluded: this.discovered.has('excluded') ? Math.min(10, 5 + this.scores.excluded) : Math.min(10, this.scores.excluded),
+      resources: this.discovered.has('resources') ? Math.min(10, 5 + this.scores.resources) : Math.min(10, this.scores.resources),
+      hypotheses: Math.min(10, this.scores.hypotheses + Math.floor(this.questionCount / 5)),
+      questions: Math.min(10, this.scores.questions + 2),
+      logic: Math.min(10, this.scores.logic + 2)
+    };
+  },
+
+  generateReport(){
+    const c = this.caseData;
+    const scores = this.calculateScores();
+    const total = Math.round(Object.values(scores).reduce((a,b)=>a+b,0));
+    const tree = this.buildFamilyTree(c);
+
+    let stability = 'Умеренная устойчивость';
+    if (total >= 80) stability = 'Высокая устойчивость';
+    else if (total <= 40) stability = 'Низкая устойчивость';
+    else if (total <= 25) stability = 'Критическая перегруженность системы';
+
+    const reportHTML =
+      '<div class="gsg-report-section">' +
+      '<h3>1. Карта семейной системы</h3>' +
+      '<div class="gsg-tree">' + tree + '</div></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>2. Ключевые травматические события</h3>' +
+      '<ul class="gsg-report-list">' + c.traumas.map(t => '<li>• ' + t + '</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>3. Незавершённые процессы</h3>' +
+      '<ul class="gsg-report-list">' + c.emotions.map(e => '<li>• ' + e.emotion + ': ' + e.source + ' → ' + e.current + '</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>4. Исключённые фигуры</h3>' +
+      '<ul class="gsg-report-list">' + c.excluded.map(ex => '<li>• ' + ex.who + ': ' + ex.what + ' (' + ex.impact + ')</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>5. Семейные мифы</h3>' +
+      '<ul class="gsg-report-list">' + c.myths.map(m => '<li>• «' + m + '»</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>6. Передающиеся эмоции</h3>' +
+      '<ul class="gsg-report-list">' + c.emotions.map(e => '<li>• ' + e.emotion + ' (' + e.mechanism + '): ' + e.current + '</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>7. Повторяющиеся сценарии</h3>' +
+      '<ul class="gsg-report-list">' + c.scenarios.map(s => '<li>• ' + s.area + ': ' + s.pattern + ' (' + s.generations + ') — ' + s.origin + '</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>8. Системные ресурсы</h3>' +
+      '<ul class="gsg-report-list">' + c.resources.map(r => '<li>• ' + r.type + ' — ' + r.who + ': ' + r.what + '</li>').join('') + '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>9. Гипотезы для дальнейшей терапии</h3>' +
+      '<ul class="gsg-report-list">' +
+      '<li>• В системе передаётся ' + c.emotions[0].emotion.toLowerCase() + ' по ' + (c.emotions[0].source.includes('матер') ? 'материнской' : 'отцовской') + ' линии.</li>' +
+      '<li>• Возможна скрытая лояльность к исключённой фигуре — ' + c.excluded[0].who + '.</li>' +
+      '<li>• Семейный миф «' + c.myths[0] + '» блокирует переработку травмы.</li>' +
+      '<li>• Ресурс ' + c.resources[0].who + ' может стать опорой для клиента.</li>' +
+      '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>10. Вопросы для углублённого исследования</h3>' +
+      '<ul class="gsg-report-list">' +
+      '<li>• Какие чувства возникали у клиента при упоминании ' + c.excluded[0].who + '?</li>' +
+      '<li>• Как семейные правила влияют на текущие отношения клиента?</li>' +
+      '<li>• Какие ресурсы рода могут быть активированы в терапии?</li>' +
+      '<li>• Какие исключённые фигуры требуют включения в систему?</li>' +
+      '</ul></div>' +
+      '<div class="gsg-report-section">' +
+      '<h3>Индекс системной устойчивости</h3>' +
+      '<p><strong>' + stability + '</strong> (балл: ' + total + ' из 100)</p></div>';
+
+    document.getElementById('report-content').innerHTML = reportHTML;
+
+    const scoreLabels = {
+      system: 'Построение геносоциограммы',
+      events: 'Выявление травм',
+      emotions: 'Выявление эмоций',
+      rules: 'Работа с семейными мифами',
+      scenarios: 'Выявление сценариев',
+      excluded: 'Работа с исключёнными фигурами',
+      resources: 'Выявление ресурсов',
+      hypotheses: 'Формирование гипотез',
+      questions: 'Качество вопросов',
+      logic: 'Терапевтическая логика'
+    };
+
+    document.getElementById('score-grid').innerHTML = Object.entries(scores).map(([key,val]) => {
+      let badge = val >= 7 ? 'high' : (val >= 4 ? 'mid' : 'low');
+      return '<div class="gsg-score-item"><div class="gsg-score-label">' + scoreLabels[key] + '</div><div class="gsg-score-val">' + val + '<span class="gsg-score-badge ' + badge + '" style="margin-left:8px;">/10</span></div></div>';
+    }).join('');
+
+    document.getElementById('total-score').textContent = total;
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => app.init());
+</script>
+</body>
+</html>
